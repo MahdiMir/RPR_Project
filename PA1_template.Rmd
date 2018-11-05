@@ -1,0 +1,153 @@
+---
+title: "RPR_Project_1"
+author: "Mahdi Mirhosseini"
+date: "11/2/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``` {r echo = FALSE}
+setwd("/D @ Win/Data Science/05-Reproducible Research/Project-1")
+```
+
+**A) Loading and preprocessing data / Pckgs**
+```{r}
+download.file("https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip", destfile = "activity.zip", mode="wb")
+unzip("activity.zip")
+Activity <- read.csv("activity.csv", header = TRUE)
+library(knitr)
+library(ggplot2)
+head(Activity, 3)
+str(Activity)
+Activity$date <- as.Date(Activity$date)
+summary(Activity)
+table(is.na(Activity$steps))
+```
+
+**B) What is mean total number of steps taken per day?**
+
+*1-a) Defining a new dataset to aggregate steps*
+```{r}
+ActByDay <- aggregate(Activity$steps, by=list(Activity$date), sum)
+names(ActByDay) <- c("date", "SumSteps")
+```
+
+*1-b) Make a Histogram*
+```{r}
+ggplot(ActByDay, aes(x = SumSteps)) +
+        geom_histogram(fill = "green3", binwidth=500) +
+        labs(title = "Total Steps by Date", x = "Steps", y = "Frequency")
+```
+
+*2) Calculate and report the mean and median total number of steps taken per day*
+```{r}
+mean(ActByDay$SumSteps, na.rm = TRUE)
+
+median(ActByDay$SumSteps, na.rm = TRUE)
+```
+
+**C) What is the average daily activity pattern?**
+
+*1) Make a time series plot of the 5-minute interval and the average steps*
+```{r}
+Na_rm <- Activity[!is.na(Activity$steps),]
+ActByIntrvl <- aggregate(Na_rm$steps, by=list(Na_rm$interval), mean)
+names(ActByIntrvl) <- c("interval","mean_steps")
+ggplot(ActByIntrvl, aes(x = interval, y = mean_steps)) +
+        labs(title = "Average steps per Intervals", 
+             x = "Interval", y = "Average Steps") +
+        geom_line(color="Brown")
+```
+
+*2) 5-minute interval with maximum number of steps?*
+```{r}
+ActByIntrvl[which(ActByIntrvl$mean_steps==max(ActByIntrvl$mean_steps)),]
+```
+
+**D) Imputing missing values**
+
+*1) Total number of missing values in the dataset*
+```{r}
+sum(is.na(Activity))
+```
+
+*2) Devise a strategy for filling in all of the missing values in the dataset*
+```{r}
+NA_Rplc <- replace(Activity$steps, is.na(Activity$steps),
+                   round(mean(Activity$step, na.rm = TRUE),2))
+Activity$steps <- NA_Rplc
+```
+
+*3) Create a new dataset; original DS with "missing data" filled in*
+```{r}
+New_Act <- Activity
+```
+
+*4-a) Make a histogram of the total number of steps taken each day*
+```{r}
+SumActByDay <- aggregate(New_Act$steps, by=list(New_Act$date), sum)
+
+names(SumActByDay) = c("Date", "Total_Steps")
+
+ggplot(SumActByDay, aes(x = Total_Steps)) +
+  geom_histogram(fill = "Purple2", binwidth=2000) +
+  labs(title = "Total Daily Steps", x = "Steps", y = "Frequency")
+```
+
+*4-b) "mean" and "median" of daily number of steps and analysing the difference*
+```{r }
+OldMean <- mean(ActByDay$SumSteps, na.rm = TRUE)
+paste("Mean of daily steps in Original dataset is   ", round(OldMean,2));
+
+NewMean <- mean(SumActByDay$Total_Steps)
+paste("Mean of daily steps in New dataset is        ", round(NewMean,2))
+
+OldMedian <- median(ActByDay$SumSteps, na.rm = TRUE)
+paste("Median of daily steps in Original dataset is ", round(OldMedian,2))
+
+NewMedian <- median(SumActByDay$Total_Steps)
+paste("Median of daily steps in New dataset is      ", round(NewMedian,2))
+```
+
+```{r echo=FALSE}
+paste("Explanation: As seen from above mentioned differences, using MEAN to replace the NAs, converged total number of steps toward its original mean. It makes more NORMALITY to the dataset by making Mean and Median more closer to each other.")
+```
+
+**E) Are there differences in activity patterns between weekdays and weekends?**
+
+*1) Create new FACTOR variable: "weekday" / "weekend" indicator of given day.*
+```{r}
+New_Act$date <- as.Date(New_Act$date)
+New_Act$weekday <- weekdays(New_Act$date)
+New_Act$DayType <- ifelse(New_Act$weekday=="Saturday"|New_Act$weekday=="Sunday",
+                          "Weekend", "Weekday" )
+New_Act$DayType <- as.factor(New_Act$DayType)
+```
+
+*2) Make a panel plot; time series of interval and steps' average by DayType*
+```{r}
+MeanDayType <- aggregate(New_Act$steps, 
+                         by=list(New_Act$DayType, New_Act$interval), mean)
+
+names(MeanDayType) =c("DayType", "Interval", "Steps")
+
+ggplot(MeanDayType, aes(x = Interval, y=Steps, color=DayType)) +
+        geom_line() +
+        facet_grid(DayType ~ .) +
+        labs(title = "Mean of Steps by Interval", x = "Interval", y = "Steps")
+```
+
+
+
+
+
+
+
+
+
+
+
+
